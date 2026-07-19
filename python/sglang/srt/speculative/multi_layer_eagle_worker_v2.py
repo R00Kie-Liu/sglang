@@ -401,8 +401,11 @@ class MultiLayerEagleDraftWorker(EagleDraftWorkerBase):
         topk_index_list = []
         draft_probs_list = []
         for step in range(self.speculative_num_steps):
+            # DP/MLP-sync padding mutates ForwardBatch fields in place. Keep
+            # those per-runner mutations from leaking into the next MTP step.
+            step_forward_batch = replace(forward_batch)
             output: ModelRunnerOutput = self.draft_runner_list[step].forward(
-                forward_batch
+                step_forward_batch
             )
             maybe_detect_nan(
                 output.logits_output.next_token_logits,
